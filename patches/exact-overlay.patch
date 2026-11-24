@@ -1,0 +1,326 @@
+diff --git a/host/ink/src/device/d3d11/composition.rs b/host/ink/src/device/d3d11/composition.rs
+index c30f5c30..b9f0bf62 100644
+--- a/host/ink/src/device/d3d11/composition.rs
++++ b/host/ink/src/device/d3d11/composition.rs
+@@ -836,6 +836,12 @@ fn opaque_background(color: [u8; 4]) -> [u8; 4] {
+ }
+ 
+ fn set_backdrop(hwnd: HWND) -> bool {
++    use windows::Win32::UI::WindowsAndMessaging::{GetWindowLongW, GWL_EXSTYLE, WS_EX_TOPMOST};
++    // An overlay (`exact_windows::Window::overlay`) shows the desktop behind
++    // it where the app paints nothing, so it takes no material.
++    if unsafe { GetWindowLongW(hwnd, GWL_EXSTYLE) } as u32 & WS_EX_TOPMOST.0 != 0 {
++        return true;
++    }
+     unsafe {
+         let backdrop = DWMSBT_MAINWINDOW;
+         optional_backdrop(
+diff --git a/host/windows/src/appearance.rs b/host/windows/src/appearance.rs
+index 985fb842..f85cffe8 100644
+--- a/host/windows/src/appearance.rs
++++ b/host/windows/src/appearance.rs
+@@ -22,9 +22,10 @@ use windows_sys::Win32::{
+         Accessibility::{HCF_HIGHCONTRASTON, HIGHCONTRASTW},
+         Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass},
+         WindowsAndMessaging::{
+-            PostMessageW, SystemParametersInfoW, PBT_APMRESUMEAUTOMATIC, SPI_GETHIGHCONTRAST,
+-            SPI_GETSCREENREADER, WM_NCDESTROY, WM_NULL, WM_POWERBROADCAST, WM_SETTINGCHANGE,
+-            WM_SYSCOLORCHANGE, WM_THEMECHANGED, WM_TIMECHANGE,
++            GetWindowLongW, PostMessageW, SystemParametersInfoW, GWL_EXSTYLE,
++            PBT_APMRESUMEAUTOMATIC, SPI_GETHIGHCONTRAST, SPI_GETSCREENREADER, WM_DISPLAYCHANGE,
++            WM_NCDESTROY, WM_NULL, WM_POWERBROADCAST, WM_SETTINGCHANGE, WM_SYSCOLORCHANGE,
++            WM_THEMECHANGED, WM_TIMECHANGE, WS_EX_TOPMOST,
+         },
+     },
+ };
+@@ -159,6 +160,11 @@ unsafe extern "system" fn changed(
+             // https://learn.microsoft.com/windows/win32/sysinfo/wm-timechange
+             // https://learn.microsoft.com/windows/win32/power/pbt-apmresumeautomatic
+             PostMessageW(window, WM_NULL, 0, 0);
++        } else if message == WM_DISPLAYCHANGE
++            && GetWindowLongW(window, GWL_EXSTYLE) as u32 & WS_EX_TOPMOST != 0
++        {
++            // An overlay (`crate::Window::overlay`) covers the displays there are now, shown or not.
++            crate::placement::cover_raw(window);
+         }
+         DefSubclassProc(window, message, wparam, lparam)
+     }
+diff --git a/host/windows/src/lib.rs b/host/windows/src/lib.rs
+index 0c7a0b91..148a9d34 100644
+--- a/host/windows/src/lib.rs
++++ b/host/windows/src/lib.rs
+@@ -91,6 +91,11 @@ pub struct Window {
+     /// Closing it hides it and the app keeps running (`keepRunning`, LLP
+     /// 1133.025 D4); otherwise the app ends with it.
+     pub keep_running: bool,
++    /// An overlay instead of a titled window: borderless, above every other
++    /// window, absent from the taskbar, see-through where the app paints
++    /// nothing, and covering every display, as it is shown and as they change. The sizes
++    /// above are then unused.
++    pub overlay: bool,
+ }
+ 
+ impl Default for Window {
+@@ -101,6 +106,7 @@ impl Default for Window {
+             min_width: 0.0,
+             min_height: 0.0,
+             keep_running: false,
++            overlay: false,
+         }
+     }
+ }
+diff --git a/host/windows/src/placement.rs b/host/windows/src/placement.rs
+index 0b59797a..9c62e7a4 100644
+--- a/host/windows/src/placement.rs
++++ b/host/windows/src/placement.rs
+@@ -48,6 +48,9 @@ pub(crate) enum State {
+     Maximized,
+     /// Covering its monitor, which winit does not resize for a new DPI.
+     Fullscreen,
++    /// Covering every display, frameless: an overlay, which keeps its
++    /// rectangle and takes a new DPI as a normal window does.
++    Overlay,
+ }
+ 
+ /// Where the window is, or will be once it shows.
+@@ -72,8 +75,8 @@ pub(crate) fn shown_dpi(on_screen: bool, window: u32, monitor: u32) -> u32 {
+ /// (Windows's suggested rectangle keeps it for a scale change in place) and
+ /// its client's logical size, rounded as winit rounds it, and is then kept
+ /// in the work area as [`fit`] keeps it. A maximized window fills the work
+-/// area with its sizing borders beyond it; a fullscreen one keeps its
+-/// rectangle. A minimized window is described as it is.
++/// area with its sizing borders beyond it; a fullscreen one or an overlay
++/// keeps its rectangle. A minimized window is described as it is.
+ pub(crate) fn shown(frame: &Frame, minimum: (f32, f32)) -> Shown {
+     let on_screen = frame.on_screen || frame.state == State::Minimized;
+     let dpi = shown_dpi(on_screen, frame.dpi, frame.monitor_dpi);
+@@ -84,7 +87,8 @@ pub(crate) fn shown(frame: &Frame, minimum: (f32, f32)) -> Shown {
+             dpi,
+         },
+     };
+-    if dpi == frame.dpi || frame.dpi == 0 {
++    // An overlay keeps its rectangle, which is its client: it has no frame.
++    if dpi == frame.dpi || frame.dpi == 0 || frame.state == State::Overlay {
+         return Shown {
+             outer: frame.outer,
+             client: crate::displays::Client {
+@@ -105,7 +109,7 @@ pub(crate) fn shown(frame: &Frame, minimum: (f32, f32)) -> Shown {
+             ])
+         }
+         State::Fullscreen => return place(frame.outer),
+-        State::Normal | State::Minimized => {}
++        State::Normal | State::Minimized | State::Overlay => {}
+     }
+     // winit's arithmetic: to logical pixels at the old scale, then to
+     // physical ones at the new.
+@@ -134,7 +138,7 @@ fn fit_rect(rect: Rect, work: Rect, minimum: (i32, i32)) -> Rect {
+ }
+ 
+ #[cfg(windows)]
+-pub(crate) use os::{fit, shown_now, take_dpi};
++pub(crate) use os::{cover, cover_raw, fit, shown_now, take_dpi};
+ 
+ #[cfg(windows)]
+ #[allow(unsafe_code)]
+@@ -154,8 +158,10 @@ mod os {
+                 AdjustWindowRectExForDpi, GetDpiForMonitor, GetDpiForWindow, MDT_EFFECTIVE_DPI,
+             },
+             WindowsAndMessaging::{
+-                GetClientRect, GetWindowLongW, GetWindowRect, IsIconic, IsWindowVisible, IsZoomed,
+-                SetWindowPos, GWL_EXSTYLE, GWL_STYLE, SWP_NOACTIVATE, SWP_NOSIZE, SWP_NOZORDER,
++                GetClientRect, GetSystemMetrics, GetWindowLongW, GetWindowRect, IsIconic,
++                IsWindowVisible, IsZoomed, SetWindowPos, GWL_EXSTYLE, GWL_STYLE, HWND_TOPMOST,
++                SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN,
++                SWP_NOACTIVATE, SWP_NOSIZE, SWP_NOZORDER, WS_EX_TOPMOST,
+             },
+         },
+     };
+@@ -168,6 +174,44 @@ mod os {
+         [r.left, r.top, r.right, r.bottom]
+     }
+ 
++    /// The virtual desktop, every display, in physical pixels
++    /// ([GetSystemMetrics](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-getsystemmetrics)).
++    fn virtual_screen() -> Rect {
++        let [x, y, width, height] = [
++            SM_XVIRTUALSCREEN,
++            SM_YVIRTUALSCREEN,
++            SM_CXVIRTUALSCREEN,
++            SM_CYVIRTUALSCREEN,
++        ]
++        .map(|metric| unsafe { GetSystemMetrics(metric) });
++        [x, y, x + width, y + height]
++    }
++
++    /// Places a borderless window over the virtual desktop, above every other window.
++    pub(crate) fn cover(window: &Window) {
++        if let Ok(RawWindowHandle::Win32(handle)) = window.window_handle().map(|h| h.as_raw()) {
++            cover_raw(handle.hwnd.get() as _);
++        }
++    }
++
++    /// As [`cover`], for the window's handle. Borderless, its rectangle is its client's.
++    /// Showing does not raise it: when Windows refuses it the foreground, as while a shell
++    /// flyout has it, a window made topmost since would stay above it.
++    pub(crate) fn cover_raw(hwnd: HWND) {
++        let [left, top, right, bottom] = virtual_screen();
++        unsafe {
++            SetWindowPos(
++                hwnd,
++                HWND_TOPMOST,
++                left,
++                top,
++                right - left,
++                bottom - top,
++                SWP_NOACTIVATE,
++            );
++        }
++    }
++
+     /// The monitor holding most of the window `hwnd`: its rectangle and work area.
+     fn monitor(hwnd: HWND) -> Option<(Rect, Rect)> {
+         let mut monitor = MONITORINFO {
+@@ -221,6 +265,8 @@ mod os {
+             State::Minimized
+         } else if unsafe { IsZoomed(hwnd) } != 0 {
+             State::Maximized
++        } else if rect(outer) == virtual_screen() && extended & WS_EX_TOPMOST != 0 {
++            State::Overlay
+         } else if rect(outer) == bounds {
+             State::Fullscreen
+         } else {
+@@ -260,7 +306,7 @@ mod os {
+         let [left, top, right, bottom] = shown.outer;
+         let pending = unsafe { GetDpiForWindow(hwnd) } != shown.client.dpi;
+         let state = frame(hwnd).map(|f| f.state);
+-        if !pending || state != Some(State::Normal) {
++        if !pending || !matches!(state, Some(State::Normal | State::Overlay)) {
+             return;
+         }
+         let Some((bounds, _)) = monitor(hwnd) else {
+diff --git a/host/windows/src/window.rs b/host/windows/src/window.rs
+index d0697c07..f71a2c27 100644
+--- a/host/windows/src/window.rs
++++ b/host/windows/src/window.rs
+@@ -40,6 +40,7 @@ struct App<D: DataSource> {
+     name: String,
+     title: WindowTitle,
+     min_size: (f32, f32),
++    overlay: bool,
+     config: Config,
+     painter: PainterBoot,
+     window: Option<Rc<Window>>,
+@@ -330,6 +331,7 @@ pub(super) fn run<D: DataSource + Default + 'static, const DEVELOPMENT: bool>(
+         name: name.to_owned(),
+         title: WindowTitle::default(),
+         min_size: (opening.min_width, opening.min_height),
++        overlay: opening.overlay,
+         config,
+         painter,
+         window: None,
+@@ -488,7 +490,7 @@ impl<D: DataSource + Default + 'static> App<D> {
+             if let Some(window) = &self.window {
+                 // Winit has applied its DPI size by the next redraw. It preserves
+                 // logical size even when that puts content below the desktop.
+-                if crate::placement::fit(window, self.min_size) {
++                if !self.overlay && crate::placement::fit(window, self.min_size) {
+                     self.resized();
+                 }
+             }
+@@ -940,8 +942,19 @@ impl<D: DataSource + Default + 'static> ApplicationHandler<crate::accessibility:
+             return;
+         }
+         boot_phase("resumed");
+-        let window = match events.create_window(
++        let placed = if self.overlay {
++            Window::default_attributes()
++                .with_decorations(false)
++                .with_resizable(false)
++                .with_skip_taskbar(true)
++                .with_window_level(winit::window::WindowLevel::AlwaysOnTop)
++        } else {
+             Window::default_attributes()
++                .with_inner_size(LogicalSize::new(self.config.size.0, self.config.size.1))
++                .with_min_inner_size(LogicalSize::new(self.min_size.0, self.min_size.1))
++        };
++        let window = match events.create_window(
++            placed
+                 .with_no_redirection_bitmap(self.direct)
+                 .with_visible(false)
+                 .with_drag_and_drop(false)
+@@ -952,9 +965,7 @@ impl<D: DataSource + Default + 'static> ApplicationHandler<crate::accessibility:
+                     (self.frame_limit.is_some()
+                         && std::env::var_os("EXACT_AGENT_WINDOW_FULLSCREEN").is_some())
+                     .then_some(Fullscreen::Borderless(None)),
+-                )
+-                .with_inner_size(LogicalSize::new(self.config.size.0, self.config.size.1))
+-                .with_min_inner_size(LogicalSize::new(self.min_size.0, self.min_size.1)),
++                ),
+         ) {
+             Ok(value) => Rc::new(value),
+             Err(e) => {
+@@ -963,7 +974,11 @@ impl<D: DataSource + Default + 'static> ApplicationHandler<crate::accessibility:
+             }
+         };
+         boot_phase("window-created");
+-        crate::placement::fit(&window, self.min_size);
++        if self.overlay {
++            crate::placement::cover(&window);
++        } else {
++            crate::placement::fit(&window, self.min_size);
++        }
+         self.accessibility = Some(crate::accessibility::Access::new(
+             events,
+             &window,
+@@ -1199,7 +1214,15 @@ impl<D: DataSource + Default + 'static> ApplicationHandler<crate::accessibility:
+         ) {
+             self.observe_monitor();
+         }
+-        if matches!(event, WindowEvent::ScaleFactorChanged { .. }) {
++        if let WindowEvent::ScaleFactorChanged {
++            mut inner_size_writer,
++            ..
++        } = event
++        {
++            if let (true, Some(window)) = (self.overlay, &self.window) {
++                // An overlay keeps covering the displays, in physical pixels.
++                let _ = inner_size_writer.request_inner_size(window.inner_size());
++            }
+             // Winit applies the new pixel extent after this callback. Pairing
+             // its new scale with the old extent can clamp a list's scroll
+             // position against a viewport that will never be shown.
+diff --git a/host/windows/src/window/lifecycle.rs b/host/windows/src/window/lifecycle.rs
+index 120f5512..0bb8d67c 100644
+--- a/host/windows/src/window/lifecycle.rs
++++ b/host/windows/src/window/lifecycle.rs
+@@ -253,6 +253,10 @@ impl<D: DataSource + Default + 'static> App<D> {
+             if self.pending_show.is_none() {
+                 window.set_visible(true);
+             }
++            if self.overlay {
++                // After the displays change, Windows puts a hidden window back on one of them as it is shown.
++                crate::placement::cover(&window);
++            }
+             // A page put away comes back (`pageshow` with `persisted`); a
+             // hidden launch's window shows for the first time, no restore.
+             self.tell_page(|page| {
+diff --git a/host/windows/src/window/tests.rs b/host/windows/src/window/tests.rs
+index e0c15591..af1cdea3 100644
+--- a/host/windows/src/window/tests.rs
++++ b/host/windows/src/window/tests.rs
+@@ -135,6 +135,7 @@ fn direct_window_blinks_without_a_softbuffer_surface() {
+         name: "Ink caret regression".into(),
+         title: WindowTitle::default(),
+         min_size: (1., 1.),
++        overlay: false,
+         config: Config::from_env(&plan, ""),
+         window: Some(window),
+         surface: None,
+@@ -600,6 +601,7 @@ fn test_app<D: DataSource>(
+         name: "Frame scheduling regression".into(),
+         title: WindowTitle::default(),
+         min_size: (1., 1.),
++        overlay: false,
+         config: Config::from_env(plan, ""),
+         window: None,
+         surface: None,

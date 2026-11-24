@@ -1,0 +1,21 @@
+// Everything that differs by host.
+
+shape Host
+  os: enum<"windows", "macos", "linux">
+  mod: string
+  // The global shortcut that starts a capture.
+  capture: string
+
+// `platform` is `exactPage().platform`; any other host gets Windows' ways.
+// A Mac has no PrtSc; ⇧⌘2 sits beside its own ⇧⌘3 to 5.
+fn hostOf(platform: string): Host = platform == "macos" ? Host(os="macos", mod="Meta", capture="Meta+Shift+2") : Host(os=(platform == "linux" ? "linux" : "windows"), mod="Control", capture="PrintScreen")
+
+fn chords(keys: string, host: Host): string = keys.replaceAll("Mod", host.mod)
+fn keycaps(keys: string): string = match first(keys.split(" ")) { case some(chord) => chord.replaceAll("Meta+Shift+", "⇧⌘").replaceAll("Meta+", "⌘").replaceAll("Control", "Ctrl").replaceAll("Escape", "Esc").replaceAll("PrintScreen", "PrtSc"), case none => "" }
+
+// As each host names its own:
+// `Screenshot 2026-11-11 142307.png`, `Screenshot 2026-11-11 at 14.23.07.png`, `Screenshot from 2026-11-11 14-23-07.png`.
+fn named(at: number, offset: number, host: Host): string = `Screenshot ${host.os == "linux" ? "from " : ""}${formatDate(at, offset, "iso")} ${stamp(clock(floor(at / 1000) + offset * 60), host)}.png`
+fn stamp(time: string, host: Host): string = host.os == "macos" ? `at ${parts(time, ".")}` : host.os == "linux" ? parts(time, "-") : time
+fn parts(time: string, between: string): string = `${time.slice(0, 2)}${between}${time.slice(2, 4)}${between}${time.slice(4)}`
+fn clock(second: number): string = `${1000000 + floor(second / 3600) % 24 * 10000 + floor(second / 60) % 60 * 100 + second % 60}`.slice(1)

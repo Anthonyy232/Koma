@@ -1,0 +1,3 @@
+# Koma is one file: the C runtime is linked in, not left to a Visual C++ Redistributable Windows may not have.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

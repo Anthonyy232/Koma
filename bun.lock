@@ -1,0 +1,27 @@
+{
+  "lockfileVersion": 2,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "koma",
+      "dependencies": {
+        "@exact/clipboard": "file:vendor/exact/packages/clipboard",
+        "@exact/global-shortcuts": "file:vendor/exact/packages/global-shortcuts",
+        "@exact/login-item": "file:vendor/exact/packages/login-item",
+        "@exact/screen-capture": "file:vendor/exact/packages/screen-capture",
+        "@exact/window-management": "file:vendor/exact/packages/window-management",
+      },
+    },
+  },
+  "packages": {
+    "@exact/clipboard": ["@exact/clipboard@file:vendor/exact/packages/clipboard", {}],
+
+    "@exact/global-shortcuts": ["@exact/global-shortcuts@file:vendor/exact/packages/global-shortcuts", {}],
+
+    "@exact/login-item": ["@exact/login-item@file:vendor/exact/packages/login-item", {}],
+
+    "@exact/screen-capture": ["@exact/screen-capture@file:vendor/exact/packages/screen-capture", {}],
+
+    "@exact/window-management": ["@exact/window-management@file:vendor/exact/packages/window-management", {}],
+  }
+}

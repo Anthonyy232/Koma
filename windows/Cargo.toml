@@ -1,0 +1,23 @@
+[package]
+name = "koma-windows"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[[bin]]
+name = "Koma"
+path = "src/main.rs"
+test = false
+bench = false
+
+[dependencies]
+koma-data = { path = "../data" }
+exact-data-host = { path = "../vendor/exact/data/host" }
+exact-painted = { path = "../vendor/exact/host/painted" }
+exact-windows = { path = "../vendor/exact/host/windows" }
+
+[build-dependencies]
+koma-data = { path = "../data" }
+contract = { path = "../vendor/exact/contract/cli" }
+exact-bake = { path = "../vendor/exact/bake" }
+embed-resource = "3"

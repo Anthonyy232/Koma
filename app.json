@@ -1,0 +1,7 @@
+{
+  "$schema": "vendor/exact/scripts/app.schema.json",
+  "name": "Koma",
+  "app": { "id": "com.anthonyla.koma", "name": "Koma" },
+  "host": { "windows": { "window": { "keepRunning": true } } },
+  "deploy": { "store": { "windows": "0" } }
+}

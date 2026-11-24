@@ -1,0 +1,101 @@
+// Run by `scripts/test.ps1`, headless on a fixture display. The driver has no window to put away, so
+// a capture ending, the overlay and the real clipboard are checked with `tools/peek`.
+size 1440x900
+
+test "a drag selects an area"
+  clock settle
+  tap "stage" drag 200 100 from 50 60
+  expect state chosen == true
+  expect state x == 50
+  expect state y == 60
+  expect state w == 200
+  expect state h == 100
+
+test "a drag too small to be meant selects nothing"
+  clock settle
+  tap "stage" drag 2 2 from 50 60
+  expect state chosen == false
+  expect state w == 0
+
+test "a corner resizes the selection, and too small a resize leaves it as it was"
+  clock settle
+  tap "stage" drag 200 100 from 50 60
+  tap "stage" drag 50 40 from 250 160
+  expect state w == 250
+  expect state h == 140
+  tap "stage" drag -248 -138 from 300 200
+  expect state x == 50
+  expect state w == 250
+  expect state h == 140
+
+test "the selection moves, and stays on the desktop"
+  clock settle
+  tap "stage" drag 200 100 from 50 60
+  tap "stage" drag -150 20 from 150 110
+  expect state x == 0
+  expect state y == 80
+  expect state w == 200
+
+test "a tool draws a mark, which Ctrl+Z takes back and Redo returns"
+  clock settle
+  tap "stage" drag 200 100 from 50 60
+  tap "Pen"
+  tap "stage" drag 50 20 from 100 100
+  expect state marks.0.tool == "pen"
+  expect state marks.0.path.0.x == 100
+  expect state marks.0.x1 == 150
+  type "stage" key "Control+z"
+  expect state marks == []
+  tap "Redo"
+  expect state marks.0.tool == "pen"
+
+test "a tool's key picks it"
+  clock settle
+  tap "stage" drag 200 100 from 50 60
+  type "stage" key "p"
+  expect state tool.name == "pen"
+
+test "with marks to keep, a press outside the selection does not start a new one"
+  clock settle
+  tap "stage" drag 200 100 from 50 60
+  tap "Line"
+  tap "stage" drag 50 20 from 100 100
+  tap "stage" drag 100 100 from 600 500
+  expect state x == 50
+  expect state w == 200
+  expect state marks.0.tool == "line"
+
+test "text is typed where it was placed, and Esc leaves the text but not the capture"
+  clock settle
+  tap "stage" drag 200 100 from 50 60
+  tap "Text"
+  tap "stage" drag 0 0 from 100 100
+  expect state writing == true
+  type "words" "Hi"
+  type "words" key "Enter"
+  expect state marks.0.text == "Hi"
+  expect state marks.0.x0 == 100
+  tap "stage" drag 0 0 from 120 130
+  type "words" "gone"
+  type "words" key "Escape"
+  expect state writing == false
+  expect state words == ""
+  expect state marks.0.text == "Hi"
+  expect tree has "stage"
+
+test "copy takes the picture of the selection"
+  clock settle
+  tap "stage" drag 200 100 from 50 60
+  tap "Copy"
+  clock data
+  clock settle
+  expect state leaving == "copy"
+  expect state copied.ok == true
+
+test "save writes the picture"
+  clock settle
+  tap "stage" drag 200 100 from 50 60
+  tap "Save"
+  clock data
+  clock settle
+  expect state saved.ok == true

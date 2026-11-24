@@ -1,0 +1,17 @@
+use Kind from "./toolbar.contract"
+
+// How near an edge of the selection a press must be to resize it.
+fn reach(): number = 6
+fn mag(v: number): number = max(v, 0 - v)
+fn clamp(v: number, lo: number, hi: number): number = min(max(v, lo), hi)
+fn snap(v: number, scale: number): number = round(v * scale) / scale
+// Which edge of [lo, hi] `p` is at: -1 the low one, 1 the high one, 0 neither.
+fn edge(p: number, lo: number, hi: number): number = mag(p - lo) <= reach() ? -1 : mag(p - hi) <= reach() ? 1 : 0
+// "frame" is within reach of the selection's edge.
+fn zone(px: number, py: number, x: number, y: number, w: number, h: number): enum<"outside", "frame", "inside"> = px < x - reach() or px > x + w + reach() or py < y - reach() or py > y + h + reach() ? "outside" : edge(px, x, x + w) != 0 or edge(py, y, y + h) != 0 ? "frame" : "inside"
+// "nothing" outside the selection with marks to keep. Also sets the cursor.
+fn press(at: enum<"outside", "frame", "inside">, chosen: bool, tool: Kind, marked: bool): enum<"nothing", "select", "resize", "move", "write", "draw"> = chosen == false ? "select" : at == "frame" ? "resize" : at == "inside" ? (tool.name == "move" ? "move" : tool.name == "text" ? "write" : "draw") : marked ? "nothing" : "select"
+fn resizeCursor(ex: number, ey: number): string = ex == 0 ? "ns-resize" : ey == 0 ? "ew-resize" : ex == ey ? "nwse-resize" : "nesw-resize"
+// The eight handles, clockwise from the top left, as fractions of the selection.
+fn handleX(i: number): number = i == 0 or i == 6 or i == 7 ? 0 : i == 1 or i == 5 ? 0.5 : 1
+fn handleY(i: number): number = i < 3 ? 0 : i == 3 or i == 7 ? 0.5 : 1

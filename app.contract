@@ -1,0 +1,361 @@
+// Lengths in points; the desktop has `scale` pixels to a point.
+use globalShortcut, globalshortcut, GlobalShortcut from "@exact/global-shortcuts"
+use loginItemStatus, registerLoginItem, unregisterLoginItem, LoginItemStatus from "@exact/login-item"
+use getPointerPosition, PointerPosition, getScreenDetails, ScreenDetails from "@exact/window-management"
+use captureScreens, ScreenCaptures, ScreenCapture from "@exact/screen-capture"
+// Links the package; the data source writes the clipboard with it.
+use ClipboardItem from "@exact/clipboard"
+use hostOf, keycaps, named from "./host.contract"
+use mag, clamp, snap, edge, zone, press, resizeCursor, handleX, handleY from "./selection.contract"
+use Toolbar, Kind, mover, barWidth, barHeight from "./toolbar.contract"
+
+shape Viewport
+  width: number
+  height: number
+
+shape Time
+  epochAtZero: number
+  // Minutes east of UTC.
+  utcOffset: number
+
+shape Page
+  visibilityState: string
+  // True while the window is put away.
+  persisted: bool
+  // How many times the window has come back.
+  restores: number
+  platform: string
+
+shape Point
+  x: number
+  y: number
+
+shape Mark
+  tool: enum<"move", "pen", "line", "arrow", "rect", "ellipse", "text", "pixelate">
+  color: string
+  // The stroke's width, or a text's font size.
+  size: number
+  x0: number
+  y0: number
+  x1: number
+  y1: number
+  path: Point[]
+  text: string
+
+shape Done
+  ok: bool
+
+fn stillScale(still: ScreenCapture): number = match still.screen.clientRect { case some(rect) => still.width / rect.width, case none => still.screen.devicePixelRatio }
+// To tell whether the displays changed since the freeze.
+fn layout(left: number, top: number, width: number, height: number, ratio: number): string = `${left},${top} ${width}x${height} @${ratio}`
+fn textSize(size: number): number = size * 4 + 8
+// Stills and the picture, until `forget`.
+fn folder(): string = "app:/tmp/freeze"
+fn picturePath(): string = `${folder()}/picture.png`
+
+style Label
+  padding="2px 6px"
+  border-radius="radius.cell"
+  background-color="hud.fill"
+  color="hud.ink"
+  font-size=11
+  font-weight=600
+  font-variant-numeric="tabular-nums"
+  white-space="nowrap"
+
+component Koma
+  resource viewport = exactViewport() as shape Viewport
+  resource page = exactPage() as shape Page
+  resource time = exactTime() as shape Time
+  resource hotkey = globalShortcut(id="capture", keys=host.capture) as shape GlobalShortcut else empty(id="capture", keys="", registered=false)
+  resource login = loginItemStatus() as shape LoginItemStatus else empty(available=false, state="unknown")
+  // Answered again whenever a display comes, goes, moves or changes scale.
+  resource displays = getScreenDetails() as shape ScreenDetails
+  mutation frozen as shape ScreenCaptures then open
+  mutation registered as shape LoginItemStatus refreshes login
+  mutation pointer as shape PointerPosition
+  mutation pictured as shape Done then deliver
+  mutation copied as shape Done then finish
+  mutation saved as shape Done then finish
+  mutation forgotten as shape Done
+
+  // Which showing of the window the frozen desktop is for, as `page.restores` counts them.
+  state turn = -1
+  state chosen = false
+  state x = 0
+  state y = 0
+  state w = 0
+  state h = 0
+
+  state drag: enum<"idle", "select", "move", "resize", "draw"> = "idle"
+  // Where the press began, or for a move the pointer's offset in the selection.
+  state ax = 0
+  state ay = 0
+  // A resize: the edges that follow the pointer, and the selection it began from.
+  state ex = 0
+  state ey = 0
+  state ox = 0
+  state oy = 0
+  state ow = 0
+  state oh = 0
+  // The pointer at rest, for the cursor.
+  state hx = 0
+  state hy = 0
+
+  state tool: Kind = mover()
+  state color = "#ff3b30"
+  state size = 4
+  state marks: Mark[] = []
+  state undone: Mark[] = []
+  state draft: Mark[] = []
+  state writing = false
+  state tx = 0
+  state ty = 0
+  state words = ""
+  state leaving: enum<"nowhere", "copy", "save"> = "nowhere"
+
+  derive host = hostOf(page.platform)
+  // Read from the window, so any way it goes (the bar, Alt+F4) ends the capture.
+  derive live = turn == page.restores and not page.persisted and page.visibilityState == "visible"
+  derive stills = match frozen { case some(desktop) => desktop.captures, case none => [] }
+  derive scale = match first(stills) { case some(still) => stillScale(still), case none => 1 }
+  derive frozenLayout = stills.map(s => layout(s.screen.left, s.screen.top, s.screen.width, s.screen.height, s.screen.devicePixelRatio))
+  derive nowLayout = displays.screens.map(d => layout(d.left, d.top, d.width, d.height, d.devicePixelRatio))
+  derive outdated = nowLayout.length != frozenLayout.length or frozenLayout.map(l => nowLayout.includes(l)).includes(false)
+  derive written = words == "" ? [] : [Mark(tool="text", color=color, size=textSize(size), x0=tx, y0=ty, x1=tx, y1=ty, path=[], text=words)]
+  // Windows holds PrtSc for its Snipping Tool until its setting is off.
+  derive reserved = match hotkey.reason { case some(why) => why == "reserved", case none => false }
+  derive shown = chosen or drag == "select"
+  derive busy = drag == "select" or drag == "move" or drag == "resize"
+  // The pointer's display, for the bar and messages: never across a seam. The window until known.
+  derive room = match pointer { case some(at) => at.screen.clientRect, case none => none }
+  derive roomX = match room { case some(r) => r.x, case none => 0 }
+  derive roomY = match room { case some(r) => r.y, case none => 0 }
+  derive roomW = match room { case some(r) => r.width, case none => viewport.width }
+  derive roomH = match room { case some(r) => r.height, case none => viewport.height }
+  // Under the selection, else over it, else inside it; with no selection, at the foot of the display.
+  derive barX = chosen ? clamp(x + w / 2 - barWidth() / 2, roomX + 8, max(roomX + 8, roomX + roomW - barWidth() - 8)) : roomX + (roomW - barWidth()) / 2
+  derive barY = chosen == false ? roomY + roomH - barHeight() - 64 : y + h + 12 + barHeight() <= roomY + roomH - 8 ? y + h + 12 : y - 12 - barHeight() >= roomY + 8 ? y - 12 - barHeight() : y + h - 12 - barHeight()
+  derive aim = press(zone(hx, hy, x, y, w, h), chosen, tool, marks.length > 0)
+  derive cursor = aim == "resize" ? resizeCursor(edge(hx, x, x + w), edge(hy, y, y + h)) : aim == "move" ? "move" : aim == "write" ? "text" : aim == "nothing" ? "default" : "crosshair"
+  // The size label sits over the selection, or inside it where the screen or the bar leaves no room.
+  derive labelOver = y - roomY >= 30 and barY > y
+
+  // Freeze before showing, so the picture has what was open.
+  action heard(id: string)
+    if not live
+      begin()
+  action begin
+    send frozen = captureScreens(directory=folder())
+  action open
+    chosen = false
+    x = 0
+    y = 0
+    w = 0
+    h = 0
+    drag = "idle"
+    marks = []
+    undone = []
+    draft = []
+    writing = false
+    words = ""
+    leaving = "nowhere"
+    send pointer = getPointerPosition()
+    // A window put away comes back as its next showing.
+    turn = page.persisted ? page.restores + 1 : page.restores
+    focus()
+  // Shown without a capture: opened by the person, at launch or again while running.
+  // A delay, not `change`: `begin` leads to `turn`, which this gate reads.
+  task arrive when not live and not page.persisted and page.visibilityState == "visible"
+    after(1, begin)
+
+  // Stills no longer fit changed displays; the next capture freezes them anew.
+  task outlived when live and current(displays) and outdated key=turn
+    change(finish)
+
+  // No picture of the desktop left on disk, however the window went.
+  task tidy when turn >= 0 and page.persisted key=turn
+    change(forget)
+  action forget
+    send forgotten = forget(folder())
+
+  action startAtLogin(start: bool)
+    if start
+      send registered = registerLoginItem(hidden=true)
+    else
+      send registered = unregisterLoginItem()
+
+  action down(e: PointerEvent)
+    let px = snap(e.offsetX, scale)
+    let py = snap(e.offsetY, scale)
+    let does = writing ? "nothing" : press(zone(px, py, x, y, w, h), chosen, tool, marks.length > 0)
+    if writing
+      write()
+    if does == "select"
+      drag = "select"
+      chosen = false
+      ax = px
+      ay = py
+      x = px
+      y = py
+      w = 0
+      h = 0
+    if does == "resize"
+      drag = "resize"
+      ex = edge(px, x, x + w)
+      ey = edge(py, y, y + h)
+      ox = x
+      oy = y
+      ow = w
+      oh = h
+    if does == "move"
+      drag = "move"
+      ax = px - x
+      ay = py - y
+    if does == "write"
+      writing = true
+      tx = px
+      ty = py
+      words = ""
+    if does == "draw"
+      drag = "draw"
+      draft = [Mark(tool=tool.name, color=color, size=size, x0=px, y0=py, x1=px, y1=py, path=[Point(x=px, y=py)], text="")]
+
+  action move(e: PointerEvent)
+    let px = snap(e.offsetX, scale)
+    let py = snap(e.offsetY, scale)
+    // The pointer reports more often than it crosses a pixel.
+    let moved = px != hx or py != hy
+    hx = px
+    hy = py
+    if drag == "select"
+      x = min(ax, px)
+      y = min(ay, py)
+      w = mag(px - ax)
+      h = mag(py - ay)
+    if drag == "move"
+      x = clamp(px - ax, 0, viewport.width - w)
+      y = clamp(py - ay, 0, viewport.height - h)
+    if drag == "resize"
+      let left = ex == -1 ? px : ox
+      let right = ex == 1 ? px : ox + ow
+      let top = ey == -1 ? py : oy
+      let bottom = ey == 1 ? py : oy + oh
+      x = min(left, right)
+      y = min(top, bottom)
+      w = mag(right - left)
+      h = mag(bottom - top)
+    if drag == "draw" and moved
+      draft = draft.map(d => Mark(d, x1=px, y1=py, path=(d.tool == "pen" ? d.path.concat([Point(x=px, y=py)]) : d.path)))
+
+  action up(e: PointerEvent)
+    // Too small to be meant: no selection, or the one before the resize.
+    if drag == "resize" and (w < 4 or h < 4)
+      x = ox
+      y = oy
+      w = ow
+      h = oh
+    else if drag == "select" and (w < 4 or h < 4)
+      w = 0
+      h = 0
+    else if drag == "select"
+      chosen = true
+    if drag == "draw"
+      marks = marks.concat(draft)
+      undone = []
+      draft = []
+    drag = "idle"
+    send pointer = getPointerPosition()
+    // Else the placing press leaves the focus on the stage.
+    if writing
+      focus("words")
+
+  action pickTool(kind: Kind)
+    write()
+    tool = kind
+  action pickColor(value: string)
+    color = value
+  action pickSize(value: number)
+    size = value
+  action typed(value: string)
+    words = value
+  action write
+    marks = marks.concat(written)
+    undone = written.length > 0 ? [] : undone
+    writing = false
+    words = ""
+  action undo
+    undone = undone.concat(marks.slice(-1))
+    marks = marks.slice(0, -1)
+  action redo
+    marks = marks.concat(undone.slice(-1))
+    undone = undone.slice(0, -1)
+
+  // A PNG of the selection's canvas (desktop under marks), or with no selection the desktop's.
+  action leave(how: enum<"copy", "save">)
+    write()
+    leaving = how
+    send pictured = picture(chosen ? "ink" : "screen", picturePath())
+  action deliver
+    if leaving == "copy"
+      send copied = copy(picturePath())
+    else
+      send saved = save(picturePath(), named(time.epochAtZero + performanceNow(), time.utcOffset, host))
+  action cancel
+    if writing
+      writing = false
+      words = ""
+    else
+      hideWindow()
+  action finish
+    hideWindow()
+
+  view
+    main position="relative" width="100%" height="100%" overflow="hidden" globalshortcut=heard
+      if live
+        canvas surface=screen(stills) position="absolute" left=0 top=0 width="100%" height="100%"
+        box position="absolute" left=0 right=0 top=0 height=y background-color="shade"
+        box position="absolute" left=0 right=0 top=(y + h) bottom=0 background-color="shade"
+        box position="absolute" left=0 top=y width=x height=h background-color="shade"
+        box position="absolute" left=(x + w) right=0 top=y height=h background-color="shade"
+
+        if shown
+          canvas surface=ink(marks.concat(draft), x, y, stills, turn, scale) position="absolute" left=x top=y width=w height=h
+          box position="absolute" left=(x - 1) top=(y - 1) width=(w + 2) height=(h + 2) box-sizing="border-box"
+            border="1px solid hud.ink" box-shadow="0 0 0 1px shade"
+          text `${round(w * scale)} × ${round(h * scale)}` class=Label
+            position="absolute" left=(labelOver ? x : x + 8) top=(labelOver ? y - 26 : y + 8)
+
+        if chosen
+          for i in range(8) key=i
+            box position="absolute" left=(x + w * handleX(i) - 4) top=(y + h * handleY(i) - 4) width=8 height=8
+              border-radius=4 background-color="hud.ink" box-shadow="0 0 0 1px shade, 0 1px 3px shade"
+
+        // Takes every press, above what it draws.
+        box testId="stage" position="absolute" inset=0 cursor=cursor touch-action="none"
+          pointerdown=down pointermove=move pointerup=up
+
+        if writing
+          // Taller than the type so descenders show; raised by its half-leading to sit where the canvas draws it.
+          input id="words" testId="words" value=words input=typed submit=write aria-label="Text"
+            position="absolute" left=tx top=(ty - textSize(size) * 0.15) width=max(40, x + w - tx) height=(textSize(size) * 1.3) padding=0
+            border="none" outline="none" background-color="transparent" color=color caret-color=color
+            font-size=textSize(size) font-weight=600 line-height=1.3
+
+        Toolbar(left=barX, top=barY, away=busy, host=host, tool=tool, color=color, size=size, writing=writing,
+          undoable=(marks.length > 0), redoable=(undone.length > 0),
+          pickTool=pickTool, pickColor=pickColor, pickSize=pickSize, undo=undo, redo=redo, cancel=cancel, leave=leave)
+
+        column position="absolute" left=roomX width=roomW top=(roomY + 16) gap=8 align-items="center" pointer-events="none"
+          if leaving != "nowhere" and (failed(pictured) or failed(copied) or failed(saved))
+            text (leaving == "save" ? "Couldn’t save the picture." : "Couldn’t copy the picture.") class=Label role="status"
+          if current(hotkey) and not hotkey.registered
+            text (reserved ? "Windows is keeping PrtSc for itself. In Settings, under Accessibility, Keyboard, turn off “Use the Print screen key to open screen capture”." : `Another app is using ${keycaps(host.capture)}.`) class=Label role="status"
+
+      // The status icon and its menu, which Exact ends with Exit.
+      button id="status" -exact-menu="status" popovertarget="app"
+        text "Koma"
+      column id="app" popover="auto" role="menu" position="absolute" aria-label="Koma"
+        button role="menuitemcheckbox" aria-checked=(login.state == "enabled") press=startAtLogin(login.state != "enabled")
+          popovertarget="app" popovertargetaction="hide"
+          text "Start at login"

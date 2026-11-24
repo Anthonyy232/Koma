@@ -1,0 +1,19 @@
+forma koma
+
+// Drawn over arbitrary content: the same in every scheme.
+theme
+  hud.fill = rgba(30, 30, 32, 0.92)  scheme=fixed
+  hud.ink = #ffffff  scheme=fixed
+  hud.line = rgba(255, 255, 255, 0.16)  scheme=fixed
+  hud.hover = rgba(255, 255, 255, 0.12)  scheme=fixed
+  hud.selected = rgba(255, 255, 255, 0.2)  scheme=fixed
+  hud.action = #0a84ff  scheme=fixed
+  hud.action-hover = #339dff  scheme=fixed
+  // Hairline in the shadow, so it takes no room.
+  hud.shadow: box-shadow = 0px 0px 0px 1px rgba(255, 255, 255, 0.16), 0px 12px 32px rgba(0, 0, 0, 0.45)
+  hud.ring = rgba(255, 255, 255, 0.4)  scheme=fixed
+  shade = rgba(0, 0, 0, 0.45)  scheme=fixed
+  // Cell radius plus the bar's padding: concentric corners.
+  radius.cell: length = 8px
+  radius.bar: length = 14px
+  duration.quick = 120ms

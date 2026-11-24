@@ -1,0 +1,165 @@
+use Host, chords, keycaps from "./host.contract"
+
+// `name` is the `tool` of the marks it draws; "move" drags the selection instead.
+shape Kind
+  name: enum<"move", "pen", "line", "arrow", "rect", "ellipse", "text", "pixelate">
+  label: string
+  key: string
+  icon: string
+
+shape Swatch
+  label: string
+  color: string
+
+shape Weight
+  label: string
+  size: number
+
+fn mover(): Kind = Kind(name="move", label="Move", key="V", icon="M6 4l12 7-5 1.5L11 18z")
+fn kinds(): Kind[] = [
+  mover(),
+  Kind(name="pen", label="Pen", key="P", icon="M4 20l1-4L16.5 4.5a2.1 2.1 0 013 3L8 19l-4 1z"),
+  Kind(name="line", label="Line", key="L", icon="M5 19L19 5"),
+  Kind(name="arrow", label="Arrow", key="A", icon="M5 19L19 5M10 5h9v9"),
+  Kind(name="rect", label="Rectangle", key="R", icon="M4 6h16v12H4z"),
+  Kind(name="ellipse", label="Ellipse", key="E", icon="M12 5a7 7 0 100 14 7 7 0 000-14z"),
+  Kind(name="text", label="Text", key="T", icon="M6 6h12M12 6v13"),
+  Kind(name="pixelate", label="Pixelate", key="X", icon="M4 4h16v16H4zM4 12h16M12 4v16"),
+]
+
+fn swatches(): Swatch[] = [
+  Swatch(label="Red", color="#ff3b30"),
+  Swatch(label="Yellow", color="#ffcc00"),
+  Swatch(label="Green", color="#34c759"),
+  Swatch(label="Blue", color="#0a84ff"),
+  Swatch(label="Black", color="#1c1c1e"),
+  Swatch(label="White", color="#ffffff"),
+]
+
+fn weights(): Weight[] = [
+  Weight(label="Thin", size=2),
+  Weight(label="Medium", size=4),
+  Weight(label="Thick", size=8),
+]
+
+fn cell(): number = 32
+fn gap(): number = 2
+fn pad(): number = 6
+fn copyWidth(): number = 64
+fn dividerWidth(): number = 13
+// Computed, not measured, to centre the bar under the selection.
+fn barWidth(): number = (kinds().length + swatches().length + weights().length + 4) * (cell() + gap()) + 4 * (dividerWidth() + gap()) + copyWidth() + pad() * 2
+fn barHeight(): number = cell() + pad() * 2
+
+style Bar
+  display="flex"
+  align-items="center"
+  box-sizing="border-box"
+  border-radius="radius.bar"
+  background-color="hud.fill"
+  box-shadow="hud.shadow"
+
+style Cell
+  display="flex"
+  align-items="center"
+  justify-content="center"
+  padding=0
+  border="none"
+  border-radius="radius.cell"
+  background-color="transparent"
+  cursor="default"
+  transition="background-color duration.quick ease"
+  :hover
+    background-color="hud.hover"
+  :focus-visible
+    background-color="hud.hover"
+  :active
+    background-color="hud.selected"
+  :checked
+    background-color="hud.selected"
+  :disabled
+    opacity=0.35
+
+component Toolbar
+  props
+    left: number
+    top: number
+    // While the selection is dragged.
+    away: bool
+    host: Host
+    tool: Kind
+    color: string
+    size: number
+    writing: bool
+    undoable: bool
+    redoable: bool
+    pickTool: action
+    pickColor: action
+    pickSize: action
+    undo: action
+    redo: action
+    cancel: action
+    leave: action
+  view
+    // Faded, not removed, while dragging: a button hears its keys only while mounted.
+    // While typing, its keys but Esc are the text field's.
+    row class=Bar position="absolute" left=left top=top width=barWidth() height=barHeight()
+      gap=gap() padding=pad() opacity=(away ? 0 : 1) pointer-events=(away ? "none" : "auto")
+      transition="opacity duration.quick ease"
+      for kind in kinds() key=kind.name
+        button appearance="none" class=Cell width=cell() height=cell() press=pickTool(kind)
+          title=`${kind.label} (${kind.key})` aria-label=kind.label aria-pressed=(tool.name == kind.name)
+          aria-keyshortcuts=(writing ? "" : kind.key)
+          Icon(d=kind.icon)
+      Divider()
+      for swatch in swatches() key=swatch.color
+        button appearance="none" class=Cell width=cell() height=cell() press=pickColor(swatch.color)
+          title=swatch.label aria-label=swatch.label aria-pressed=(color == swatch.color)
+          box width=16 height=16 border-radius=8 background-color=swatch.color box-shadow="0 0 0 1px hud.ring"
+      Divider()
+      for weight in weights() key=weight.size
+        button appearance="none" class=Cell width=cell() height=cell() press=pickSize(weight.size)
+          title=weight.label aria-label=weight.label aria-pressed=(size == weight.size)
+          box width=(weight.size + 4) height=(weight.size + 4) border-radius=(weight.size / 2 + 2) background-color="hud.ink"
+      Divider()
+      Command(label="Undo", keys=chords("Mod+Z", host), icon="M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3", off=(undoable == false), quiet=writing, run=undo)
+      Command(label="Redo", keys=chords("Mod+Shift+Z Mod+Y", host), icon="M15 14l5-5-5-5M20 9H10a6 6 0 000 12h3", off=(redoable == false), quiet=writing, run=redo)
+      Divider()
+      Command(label="Cancel", keys="Escape", icon="M6 6L18 18M18 6L6 18", off=false, quiet=false, run=cancel)
+      Command(label="Save", keys=chords("Mod+S", host), icon="M12 4v11M7 11l5 5 5-5M5 20h14", off=false, quiet=writing, run=leave("save"))
+      button appearance="none" class=Cell press=leave("copy") title=`Copy (${keycaps(chords("Enter Mod+C", host))})` aria-keyshortcuts=(writing ? "" : chords("Enter Mod+C", host))
+        width=copyWidth() height=cell() background-color="hud.action" color="hud.ink" font-size=13 font-weight=600
+        :hover
+          background-color="hud.action-hover"
+        :focus-visible
+          background-color="hud.action-hover"
+        :active
+          background-color="hud.action-hover"
+          opacity=0.8
+        text "Copy"
+
+component Command
+  props
+    label: string
+    keys: string
+    icon: string
+    off: bool
+    // True while its keys are the text field's.
+    quiet: bool
+    run: action
+  view
+    button appearance="none" class=Cell width=cell() height=cell() press=run disabled=off
+      title=`${label} (${keycaps(keys)})` aria-label=label aria-keyshortcuts=(quiet ? "" : keys)
+      Icon(d=icon)
+
+component Divider
+  view
+    row width=dividerWidth() height=20 justify-content="center"
+      box width=1 background-color="hud.line"
+
+component Icon
+  props
+    d: string
+  view
+    svg viewBox="0 0 24 24" width=20 height=20
+      path d=d fill="none" stroke="hud.ink" stroke-width=1.8 stroke-linecap="round" stroke-linejoin="round"
