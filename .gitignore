@@ -3,3 +3,5 @@
 /node_modules/
 /.exact/
 /local/
+# Copied from assets/ when the site is deployed.
+/site/logo.svg

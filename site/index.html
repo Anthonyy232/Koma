@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Koma: your screen, framed</title>
+  <meta name="description" content="A screenshot tool for Windows: freeze the desktop, drag an area, mark it up, then copy or save it.">
+  <meta property="og:title" content="Koma: your screen, framed">
+  <meta property="og:description" content="A screenshot tool for Windows. Freeze the desktop, drag an area, mark it up, then copy or save it.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://anthonyy232.github.io/Koma/">
+  <meta name="theme-color" content="#f5f3ee" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#171614" media="(prefers-color-scheme: dark)">
+  <link rel="canonical" href="https://anthonyy232.github.io/Koma/">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="preload" href="fonts/instrument-serif.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header>
+    <div class="wrap">
+      <a class="brand" href="./"><img src="logo.svg" alt="" width="30" height="30">Koma</a>
+      <nav aria-label="Site">
+        <a href="#features">Features</a>
+        <a href="#install">Install</a>
+        <a class="keep" href="https://github.com/Anthonyy232/Koma">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero wrap">
+      <h1>your screen, <em>framed</em></h1>
+      <p class="lede">A screenshot tool for Windows. Freeze the desktop, drag an area, mark it up, then copy or save it.</p>
+      <div class="actions">
+        <a class="button" href="https://github.com/Anthonyy232/Koma/releases/latest/download/Koma.exe">Download Koma for Windows</a>
+        <a class="button quiet" href="https://github.com/Anthonyy232/Koma">View the source</a>
+      </div>
+      <div class="stage">
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="img/hero-dark.png">
+          <img class="shot" src="img/hero-light.png" width="1385" height="963" alt="An area selected on a frozen desktop, with an arrow, an ellipse, a text note and a pixelated block drawn on it, and Koma's toolbar below.">
+        </picture>
+      </div>
+    </section>
+
+    <div id="features" class="wrap">
+      <section class="feature">
+        <div>
+          <div class="num">01</div>
+          <h2>Freeze, then <em>frame</em></h2>
+          <p>PrtSc freezes every display as it is, so menus and tooltips stay put. Drag the area you want, then nudge its edges until the pixel count is right.</p>
+          <ul class="keys">
+            <li class="full"><kbd class="wide">PrtSc</kbd> Start a capture from anywhere</li>
+          </ul>
+        </div>
+        <div class="stage corner">
+          <picture>
+            <source media="(prefers-color-scheme: dark)" srcset="img/select-dark.png">
+            <img class="shot" src="img/select-light.png" width="775" height="538" loading="lazy" alt="The corner of a selected area, with its handles and its size in pixels.">
+          </picture>
+        </div>
+      </section>
+
+      <section class="feature">
+        <div>
+          <div class="num">02</div>
+          <h2>Say it <em>on</em> the picture</h2>
+          <p>Six colours, three weights, and undo and redo as far as you like. Every tool is one key.</p>
+          <ul class="keys">
+            <li><kbd>P</kbd> Pen</li>
+            <li><kbd>L</kbd> Line</li>
+            <li><kbd>A</kbd> Arrow</li>
+            <li><kbd>R</kbd> Rectangle</li>
+            <li><kbd>E</kbd> Ellipse</li>
+            <li><kbd>T</kbd> Text</li>
+          </ul>
+        </div>
+        <div class="stage corner">
+          <picture>
+            <source media="(prefers-color-scheme: dark)" srcset="img/marks-dark.png">
+            <img class="shot" src="img/marks-light.png" width="700" height="500" loading="lazy" alt="An arrow and a text note drawn in red on a map.">
+          </picture>
+        </div>
+      </section>
+
+      <section class="feature">
+        <div>
+          <div class="num">03</div>
+          <h2>Hidden <em>for good</em></h2>
+          <p>Ordinary pixelation can be guessed back. Koma blends each block with what is far around it and adds noise that differs on every capture, so nobody can work back to what was there.</p>
+          <ul class="keys">
+            <li><kbd>X</kbd> Pixelate</li>
+          </ul>
+        </div>
+        <div class="stage middle">
+          <picture>
+            <source media="(prefers-color-scheme: dark)" srcset="img/pixelate-dark.png">
+            <img class="shot" src="img/pixelate-light.png" width="550" height="143" loading="lazy" alt="A door code and a Wi-Fi password covered by pixelated blocks.">
+          </picture>
+        </div>
+      </section>
+
+      <section class="feature">
+        <div>
+          <div class="num">04</div>
+          <h2>Out in <em>one</em> key</h2>
+          <p>Copy the picture to the clipboard, or save it as a PNG in your Screenshots folder, named the way Windows names its own.</p>
+          <ul class="keys">
+            <li><kbd class="wide">Enter</kbd> Copy</li>
+            <li><kbd class="wide">Ctrl+S</kbd> Save</li>
+            <li><kbd class="wide">Esc</kbd> Cancel</li>
+          </ul>
+        </div>
+        <div class="stage middle">
+          <picture>
+            <source media="(prefers-color-scheme: dark)" srcset="img/deliver-dark.png">
+            <img class="shot" src="img/deliver-light.png" width="675" height="120" loading="lazy" alt="Koma's toolbar: colours, weights, undo, redo, cancel, save and a Copy button.">
+          </picture>
+        </div>
+      </section>
+    </div>
+
+    <section class="more wrap">
+      <div class="num">And</div>
+      <h2>nothing <em>else</em></h2>
+      <ul>
+        <li>
+          <h3>One file</h3>
+          <p>A single program with no installer. Put it wherever you keep programs and run it.</p>
+        </li>
+        <li>
+          <h3>Stays on your computer</h3>
+          <p>No account and no network. The frozen pictures of your desktop are deleted when the capture ends.</p>
+        </li>
+        <li>
+          <h3>Out of the way</h3>
+          <p>Koma waits in the notification area, where you can set it to start at login.</p>
+        </li>
+      </ul>
+    </section>
+
+    <section id="install" class="install wrap">
+      <div class="num">Install</div>
+      <h2>Get <em>Koma</em></h2>
+      <div class="cols">
+        <div>
+          <h3>Windows 10 and 11</h3>
+          <p>Download Koma.exe and run it. It isn't code-signed, so Windows SmartScreen may warn the first time: choose More info, then Run anyway.</p>
+          <div class="actions"><a class="button" href="https://github.com/Anthonyy232/Koma/releases/latest/download/Koma.exe">Download Koma for Windows</a></div>
+        </div>
+        <div>
+          <h3>If PrtSc opens Snipping Tool</h3>
+          <p>Windows keeps the key for itself until you turn off <b>Use the Print screen key to open screen capture</b> in Settings, under Accessibility, then Keyboard.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p>© 2026 Anthony La. Free software under the <a href="https://github.com/Anthonyy232/Koma/blob/main/LICENSE">GPL-3.0</a>.</p>
+      <p><a href="https://github.com/Anthonyy232/Koma">Source</a></p>
+      <p><a href="https://github.com/Anthonyy232/Koma/releases">Releases</a></p>
+      <p><a href="https://github.com/Anthonyy232/Koma/issues">Report a bug</a></p>
+    </div>
+  </footer>
+</body>
+</html>

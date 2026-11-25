@@ -6,7 +6,7 @@
 <p align="center">
   <a href="https://github.com/Anthonyy232/Koma/releases/latest/download/Koma.exe"><b>Download Koma for Windows</b></a>
   &nbsp;·&nbsp;
-  <a href="https://github.com/Anthonyy232/Koma/releases"><b>All releases</b></a>
+  <a href="https://anthonyy232.github.io/Koma/"><b>Website</b></a>
 </p>
 
 Koma is a screenshot tool for Windows. Press PrtSc and the desktop freezes; drag the area you want, draw on it if you need to, then copy it or save it. It is one small program with no installer and no account, and it never touches the network.

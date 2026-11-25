@@ -33,6 +33,7 @@ A screenshot tool for Windows: PrtSc freezes the desktop, you drag an area, mark
 - Behaviour belongs in the `.contract` files. Rust does only what a contract can't, and `data/` has no platform code.
 - The contract tests run headless: they can't see the overlay, a capture ending or the real clipboard. Check those on the real desktop with `tools/peek`.
 - Koma pictures whatever is on screen. Run it over invented content when capturing for docs, never the owner's windows.
+- `site/` is the project website. It is not part of the program.
 - The app id is the key to its storage and login item: never change it.
 
 ## Done means
