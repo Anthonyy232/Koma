@@ -1,0 +1,73 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Koma demo desktop</title>
+<!-- The invented desktop Koma is captured over: readme/capture.cjs shows it full screen. ?dark for the dark one. -->
+<style>
+  :root { --wall: #e9e4d8; --hill1: #cfd8c0; --hill2: #b4c4a4; --hill3: #94ab88; --sun: #f2c48a;
+    --win: #fffdf9; --ink: #23211d; --muted: #6f6a60; --line: #23211d1f; --soft: #f3efe6; --trail: #c8553a; --water: #bcd3dc; --tick: #5b8a5a; }
+  .dark { --wall: #1d2126; --hill1: #2a333a; --hill2: #263a3a; --hill3: #1f4440; --sun: #c98d5a;
+    --win: #1f1e1c; --ink: #ece8df; --muted: #a39d92; --line: #ece8df24; --soft: #2a2825; --trail: #e8765a; --water: #2f4d5a; --tick: #86b783; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; overflow: hidden; cursor: none; }
+  body { display: grid; place-items: center; background: var(--wall); color: var(--ink); font: 15px/1.45 'Segoe UI', system-ui, sans-serif; }
+  .desk { position: relative; width: 1600px; height: 1000px; }
+  .desk > svg { position: absolute; inset: 0; }
+  .window { position: absolute; left: 130px; top: 120px; width: 1020px; height: 620px; border-radius: 10px; background: var(--win);
+    box-shadow: 0 24px 60px -18px #0006, 0 0 0 1px var(--line); overflow: hidden; }
+  .bar { height: 44px; display: flex; align-items: center; gap: 10px; padding: 0 16px; border-bottom: 1px solid var(--line); font-weight: 600; }
+  .bar b { width: 14px; height: 14px; border-radius: 4px; background: var(--tick); }
+  .bar span { margin-left: auto; font-weight: 400; color: var(--muted); letter-spacing: 6px; }
+  .plan { position: absolute; left: 36px; top: 76px; width: 400px; }
+  h1 { margin: 0; font-size: 30px; line-height: 1.15; letter-spacing: -0.01em; }
+  .sub { margin-top: 6px; color: var(--muted); }
+  ul { list-style: none; margin: 26px 0 0; padding: 0; }
+  li { display: flex; align-items: center; gap: 12px; height: 44px; border-bottom: 1px solid var(--line); font-size: 16px; }
+  li::before { content: ''; width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid var(--muted); }
+  li.done { color: var(--muted); }
+  li.done::before { border-color: var(--tick); background: var(--tick); }
+  li em { margin-left: auto; font-style: normal; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .keys { position: absolute; left: 36px; top: 478px; width: 400px; padding: 16px 18px; border-radius: 8px; background: var(--soft); }
+  .keys div { display: flex; justify-content: space-between; height: 30px; align-items: center; }
+  .keys span { color: var(--muted); }
+  .keys code { font: 600 16px 'Cascadia Code', Consolas, monospace; }
+  .map { position: absolute; left: 480px; top: 76px; width: 504px; height: 508px; border-radius: 8px; background: var(--soft); overflow: hidden; }
+  .map text { font: 600 14px 'Segoe UI', system-ui, sans-serif; fill: var(--ink); }
+</style>
+<script>if (location.search.includes('dark')) document.documentElement.className = 'dark';</script>
+<div class="desk">
+  <svg viewBox="0 0 1600 1000" preserveAspectRatio="none">
+    <circle cx="1330" cy="250" r="92" fill="var(--sun)"/>
+    <path d="M0 640 C260 520 420 700 700 610 S1180 470 1600 620 V1000 H0Z" fill="var(--hill1)"/>
+    <path d="M0 780 C300 660 520 840 860 740 S1340 660 1600 760 V1000 H0Z" fill="var(--hill2)"/>
+    <path d="M0 900 C340 800 640 940 980 860 S1420 820 1600 880 V1000 H0Z" fill="var(--hill3)"/>
+  </svg>
+  <div class="window">
+    <div class="bar"><b></b>Weekend plan<span>&#x2013; &#x25A1; &#x2715;</span></div>
+    <div class="plan">
+      <h1>Larkspur cabin</h1>
+      <div class="sub">Saturday, four of us, back by dark</div>
+      <ul>
+        <li class="done">Pack the stove and the blue cooler<em>Fri</em></li>
+        <li class="done">Print the trail map<em>Fri</em></li>
+        <li>Leave the city<em>7:30</em></li>
+        <li>Park at the trailhead<em>9:10</em></li>
+        <li>Lunch at Heron Lookout<em>12:00</em></li>
+        <li>Unlock the cabin<em>15:30</em></li>
+      </ul>
+    </div>
+    <div class="keys">
+      <div><span>Door code</span><code>4471 # 20</code></div>
+      <div><span>Wi-Fi password</span><code>heron-meadow-52</code></div>
+    </div>
+    <div class="map">
+      <svg viewBox="0 0 504 508" width="504" height="508">
+        <path d="M-10 380 C90 330 150 430 250 400 S420 330 520 370 V520 H-10Z" fill="var(--water)"/>
+        <path d="M70 120 l46 -70 46 70z M330 250 l38 -58 38 58z M396 262 l30 -46 30 46z" fill="var(--hill3)"/>
+        <path d="M96 300 C150 250 130 190 210 170 S330 180 350 120 S420 70 440 96" fill="none" stroke="var(--trail)" stroke-width="4" stroke-dasharray="2 10" stroke-linecap="round"/>
+        <circle cx="96" cy="300" r="9" fill="var(--trail)"/><text x="62" y="334">Trailhead</text>
+        <circle cx="268" cy="168" r="7" fill="var(--win)" stroke="var(--trail)" stroke-width="3"/><text x="232" y="150">Heron Lookout</text>
+        <rect x="430" y="86" width="20" height="20" rx="4" fill="var(--trail)"/><text x="412" y="76">Cabin</text>
+      </svg>
+    </div>
+  </div>
+</div>

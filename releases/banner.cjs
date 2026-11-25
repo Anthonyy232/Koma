@@ -1,0 +1,45 @@
+// node releases/banner.cjs <koma checkout> [<version> "<highlight>"] : release banners, 1280x640 at 2x, in releases/
+const fs = require('fs');
+const { fonts, logo, komaCheckout, launch, render } = require('../lib.cjs');
+const dir = __dirname;
+const file = `${dir}/banners.json`;
+const banners = JSON.parse(fs.readFileSync(file, 'utf8'));
+const [koma, version, highlight] = process.argv.slice(2);
+const mark = logo(komaCheckout(koma));
+if (version) {
+  banners[version] = highlight;
+  fs.writeFileSync(file, JSON.stringify(banners, null, 2) + '\n');
+}
+
+const html = (v, text) => `<!doctype html><meta charset="utf-8">${fonts}
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; width: 1280px; height: 640px; overflow: hidden; display: grid; grid-template-columns: 1fr 470px; background: #f5f3ee; color: #1c1b18; font-family: system-ui, sans-serif; }
+  .copy { padding: 64px 40px 60px 80px; display: flex; flex-direction: column; }
+  .brand { display: flex; align-items: center; gap: 12px; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+  .brand svg { width: 36px; height: 36px; }
+  .num { margin-top: auto; font: 500 18px ui-monospace, 'Cascadia Code', monospace; color: #615d55; }
+  h1 { margin: 14px 0 0; font: 400 96px/1 'Instrument Serif', Georgia, serif; letter-spacing: -0.01em; text-wrap: balance; }
+  h1 i { color: #d93a24; }
+  .stage { position: relative; margin: 40px 40px 40px 0; border-radius: 24px; overflow: hidden; display: grid; place-items: center;
+    background: radial-gradient(60% 80% at 12% 8%, #ffc2b0 0%, transparent 70%), radial-gradient(55% 70% at 92% 20%, #f7856b 0%, transparent 70%), radial-gradient(70% 70% at 55% 115%, #e5432d 0%, transparent 65%), #ffd9cd; }
+  .stage svg { width: 230px; height: 230px; }
+  .stage svg g { fill: #fff; }
+</style>
+<div class="copy">
+  <div class="brand">${mark}Koma</div>
+  <div class="num">Release ${v}</div>
+  <h1>${text}</h1>
+</div>
+<div class="stage">${mark}</div>`;
+
+// The last word carries the accent, as the README headlines do with one word.
+const accent = text => text.replace(/(\S+)$/, '<i>$1</i>');
+
+(async () => {
+  const browser = await launch();
+  for (const [v, text] of version ? [[version, highlight]] : Object.entries(banners)) {
+    await render(browser, html(v, accent(text)), `${dir}/v${v}.png`, { width: 1280, height: 640, scale: 2 });
+  }
+  await browser.close();
+})();
