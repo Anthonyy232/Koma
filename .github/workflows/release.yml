@@ -1,0 +1,34 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    uses: ./.github/workflows/checks.yml
+
+  build:
+    needs: checks
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - run: cargo build --release -p koma-windows
+      # Onto the draft written for this version, or a new one.
+      - run: |
+          gh release view $env:TAG *> $null
+          if ($LASTEXITCODE) { gh release create $env:TAG --draft --verify-tag --title "Koma $($env:TAG.TrimStart('v'))" }
+          gh release upload $env:TAG target/release/Koma.exe --clobber
+        env:
+          TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}

@@ -1,0 +1,16 @@
+version: 2
+# No cargo updates: the manifests name crates in vendor/exact, which is fetched, not committed.
+updates:
+  - package-ecosystem: github-actions
+    directories: [/, /.github/actions/setup]
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 5
+    groups:
+      minor-patch:
+        update-types: [minor, patch]
+      major:
+        update-types: [major]
+    commit-message:
+      prefix: chore(deps)

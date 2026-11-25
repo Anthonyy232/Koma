@@ -1,0 +1,17 @@
+name: Set up
+description: Bun, the shader compiler, the Rust cache and the Exact checkout Koma builds against
+runs:
+  using: composite
+  steps:
+    - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      with:
+        # The version Exact pins.
+        bun-version: 1.4.2
+    # Without fxc the build bakes empty shaders and the window can't open its Direct3D device.
+    - shell: pwsh
+      run: |
+        $fxc = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\fxc.exe" | Sort-Object { [version]$_.Directory.Parent.Name } | Select-Object -Last 1
+        $fxc.DirectoryName >> $env:GITHUB_PATH
+    - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+    - shell: pwsh
+      run: scripts/setup.ps1
