@@ -1,0 +1,24 @@
+name: Bug report
+description: Something in Koma doesn't work as it should
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected and what happened instead.
+    validations:
+      required: true
+  - type: input
+    id: displays
+    attributes:
+      label: Displays
+      description: How many, and each one's resolution and scale, if the capture or the overlay looks wrong.
+      placeholder: 2560x1440 at 125%, 1920x1080 at 100%
+  - type: input
+    id: version
+    attributes:
+      label: Koma and Windows version
+      placeholder: Koma 0.1.0, Windows 11 25H2
+    validations:
+      required: true
