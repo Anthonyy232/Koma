@@ -1,4 +1,4 @@
-// node readme/build.cjs <koma checkout> : the app icon, the README hero and feature panels (light/dark) and the social preview
+// node readme/build.cjs <koma checkout> : the app icon, the README hero and feature panels (light/dark), the site's images and the social preview
 const fs = require('fs');
 const path = require('path');
 const { fonts, logo, komaCheckout, launch, render } = require('../lib.cjs');
@@ -6,6 +6,7 @@ const { fonts, logo, komaCheckout, launch, render } = require('../lib.cjs');
 const koma = komaCheckout(process.argv[2]);
 const inputs = path.join(__dirname, 'inputs');
 const readme = path.join(koma, '.github/readme');
+const site = path.join(koma, 'site/img');
 const b64 = file => 'data:image/png;base64,' + fs.readFileSync(path.join(inputs, file)).toString('base64');
 const mark = logo(koma);
 
@@ -106,11 +107,20 @@ const features = scheme => {
   };
 };
 
+// The site's pictures: parts of a capture at its own pixels, in the capture's points.
+const SCALE = 1.25;
+const CROPS = { hero: ['marks', 96, 68, 1108, 770], select: ['select', 96, 68, 620, 430], marks: ['marks', 590, 280, 560, 400], pixelate: ['marks', 150, 588, 440, 114], deliver: ['marks', 540, 736, 540, 96] };
+const crop = (file, x, y) => `<style>html, body { margin: 0; } img { position: absolute; left: ${-x}px; top: ${-y}px; width: 1600px; }</style><img src="${b64(file)}">`;
+
 (async () => {
   const browser = await launch();
   await icon(browser);
   fs.mkdirSync(readme, { recursive: true });
+  fs.mkdirSync(site, { recursive: true });
   for (const scheme of ['light', 'dark']) {
+    for (const [name, [input, x, y, width, height]] of Object.entries(CROPS)) {
+      await render(browser, crop(`${input}-${scheme}.png`, x, y), `${site}/${name}-${scheme}.png`, { width, height, scale: SCALE });
+    }
     await render(browser, hero(scheme === 'dark'), `${readme}/hero-${scheme}.png`, { width: 1280, height: 760, scale: 1.6, transparent: true });
     for (const [name, html] of Object.entries(features(scheme))) {
       await render(browser, html, `${readme}/${name}-${scheme}.png`, { width: 1280, height: 560, scale: 1.6, transparent: true });

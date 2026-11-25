@@ -1,6 +1,6 @@
 # Koma media
 
-Generated images for [Koma](https://github.com/Anthonyy232/Koma), kept off `main` so it stays light: the app icon, the README hero and feature panels, the social preview and the release banners. Every script takes the path of a Koma checkout of `main`, reads the logo from its `assets/`, and needs no network.
+Generated images for [Koma](https://github.com/Anthonyy232/Koma), kept off `main` so it stays light: the app icon, the README hero and feature panels, the website screenshots, the social preview and the release banners. Every script takes the path of a Koma checkout of `main`, reads the logo from its `assets/`, and needs no network.
 
 | Path | What |
 | --- | --- |
@@ -8,7 +8,7 @@ Generated images for [Koma](https://github.com/Anthonyy232/Koma), kept off `main
 | `fonts/` | Instrument Serif, under the SIL Open Font License (`OFL.txt`) |
 | `readme/demo.html` | The invented desktop Koma is captured over (`?dark` for the dark one) |
 | `readme/capture.cjs` | Shows the demo desktop full screen and drives Koma over it with `tools/peek`, into `readme/inputs/` |
-| `readme/build.cjs` | Writes `windows/koma.ico` and `.github/readme/*.png` in the checkout, and `social-preview.png` here |
+| `readme/build.cjs` | Writes `windows/koma.ico`, `.github/readme/*.png` and `site/img/*.png` in the checkout, and `social-preview.png` here |
 | `social-preview.png` | The 1280x640 GitHub social preview |
 | `releases/banner.cjs` | Writes `releases/v<version>.png` from `releases/banners.json` |
 
@@ -22,7 +22,7 @@ cd local/media
 npm ci && npx playwright install chromium
 ```
 
-## Icon, README images and social preview
+## Icon, README and site images, social preview
 
 ```bash
 node readme/build.cjs ../..
