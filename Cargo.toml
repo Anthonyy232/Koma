@@ -6,6 +6,7 @@ resolver = "2"
 [workspace.package]
 edition = "2021"
 version = "0.1.0"
+license = "GPL-3.0-only"
 
 # Exact builds against its own patched copies of these crates.
 [patch.crates-io]

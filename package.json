@@ -1,6 +1,7 @@
 {
   "name": "koma",
   "private": true,
+  "license": "GPL-3.0-only",
   "dependencies": {
     "@exact/clipboard": "file:vendor/exact/packages/clipboard",
     "@exact/global-shortcuts": "file:vendor/exact/packages/global-shortcuts",
