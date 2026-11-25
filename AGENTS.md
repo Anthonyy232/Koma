@@ -68,7 +68,7 @@ A screenshot tool for Windows: PrtSc freezes the desktop, you drag an area, mark
 - Title `Koma X.Y.Z`.
 - Notes: banner image first, then `### New`, `### Improved`, `### Fixed` (only those that apply). One line per change, written for users; no internals, dependency lists or test counts. End with the install link(s) and the full changelog link.
 - Banner: built and hosted on the `media` branch; reference its raw URL.
-- Pushing the tag makes CI build `Koma.exe` and attach it to a draft release. The README links to that file name: never rename it.
+- The tag makes CI build `Koma.exe` and attach it to that version's release, drafting one if there is none. Publishing a draft creates the tag. The README links to that file name: never rename it.
 
 ## Agents
 
