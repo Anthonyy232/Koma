@@ -4,6 +4,13 @@
 </picture>
 
 <p align="center">
+  <a href="https://github.com/Anthonyy232/Koma/releases/latest"><img src="https://img.shields.io/github/v/release/Anthonyy232/Koma?style=flat-square" alt="Latest release"></a>
+  <a href="https://github.com/Anthonyy232/Koma/releases"><img src="https://img.shields.io/github/downloads/Anthonyy232/Koma/total?style=flat-square" alt="Total downloads"></a>
+  <a href="https://github.com/Anthonyy232/Koma/actions/workflows/checks.yml"><img src="https://img.shields.io/github/actions/workflow/status/Anthonyy232/Koma/checks.yml?style=flat-square&label=CI" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/Anthonyy232/Koma?style=flat-square" alt="License"></a>
+</p>
+
+<p align="center">
   <a href="https://github.com/Anthonyy232/Koma/releases/latest/download/Koma.exe"><b>Download Koma for Windows</b></a>
   &nbsp;·&nbsp;
   <a href="https://anthonyy232.github.io/Koma/"><b>Website</b></a>
@@ -88,7 +95,7 @@ cargo build --release -p koma-windows
 
 ## Contributing
 
-Contributions are welcome. Read [AGENTS.md](AGENTS.md) before opening a pull request.
+Contributions are welcome. Report bugs in [issues](https://github.com/Anthonyy232/Koma/issues), suggest features in [Discussions](https://github.com/Anthonyy232/Koma/discussions), and read [AGENTS.md](AGENTS.md) before opening a pull request.
 
 If Koma is useful to you, you can support it through [GitHub Sponsors](https://github.com/sponsors/Anthonyy232).
 
