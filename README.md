@@ -90,6 +90,8 @@ cargo build --release -p koma-windows
 
 Contributions are welcome. Read [AGENTS.md](AGENTS.md) before opening a pull request.
 
+If Koma is useful to you, you can support it through [GitHub Sponsors](https://github.com/sponsors/Anthonyy232).
+
 ## License
 
 Copyright (c) 2026 Anthony La.
